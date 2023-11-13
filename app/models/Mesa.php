@@ -1,7 +1,7 @@
 <?php
 
 class Mesa {
-    public $codigoMesa;
+    public $id;
     public $estado;
 
     public function crearProducto()
@@ -16,20 +16,31 @@ class Mesa {
     public static function obtenerTodos()
     {
         $objAccesoDatos = AccesoDatos::obtenerInstancia();
-        $consulta = $objAccesoDatos->prepararConsulta("SELECT codigoMesa, estado FROM mesas");
+        $consulta = $objAccesoDatos->prepararConsulta("SELECT id, estado FROM mesas");
         $consulta->execute();
 
         return $consulta->fetchAll(PDO::FETCH_CLASS, 'Mesa');
     }
 
-    public static function obtenerMesa($mesa)
+    public static function obtenerMesa($idMesa)
     {
         $objAccesoDatos = AccesoDatos::obtenerInstancia();
-        $consulta = $objAccesoDatos->prepararConsulta("SELECT codigoMesa, estado FROM mesas WHERE codigoMesa = :codigoMesa");
-        $consulta->bindValue(':codigoMesa', $mesa, PDO::PARAM_STR);
+        $consulta = $objAccesoDatos->prepararConsulta("SELECT id, estado FROM mesas WHERE id = :id");
+        $consulta->bindValue(':id', $idMesa, PDO::PARAM_STR);
         $consulta->execute();
 
         return $consulta->fetchObject('Mesa');
     }
+
+    public function modificarUsuario()
+    {
+        $objAccesoDato = AccesoDatos::obtenerInstancia();
+        $consulta = $objAccesoDato->prepararConsulta("UPDATE mesas SET estado = :estado WHERE id = :id");
+        $consulta->bindValue(':id', $this->id, PDO::PARAM_INT);
+        $consulta->bindValue(':estado', $this->estado, PDO::PARAM_STR);
+        $consulta->execute();
+    }
+
+
 
 }

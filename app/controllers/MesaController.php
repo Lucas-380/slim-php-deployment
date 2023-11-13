@@ -26,7 +26,7 @@ class MesaController extends Mesa
     public function TraerUnaMesa($request, $response, $args)
     {
         // Buscamos usuario por nombre del producto
-        $mesaAux = $args['codigoMesa'] ?? null;
+        $mesaAux = $args['idMesa'] ?? null;
 
         $mesa = Mesa::obtenerMesa($mesaAux);
         $payload = json_encode($mesa);
@@ -39,12 +39,25 @@ class MesaController extends Mesa
     public function TraerMesas($request, $response, $args)
     {
         $lista = Mesa::obtenerTodos();
-        $payload = json_encode(array("listaProductos" => $lista));
+        $payload = json_encode(array("ListaMesas" => $lista));
 
         $response->getBody()->write($payload);
         return $response
           ->withHeader('Content-Type', 'application/json');
     }
 
+    public static function BuscarMesa($id_mesa) {
+      $mesa = Mesa::obtenerMesa($id_mesa);
+      if($mesa != false) {
+        return $mesa;
+      }else{
+        return null;
+      }
+    }
+
+    public static function actualizarEstado($mesa, $estado) {
+      $mesa->estado = $estado;
+      $mesa->modificarUsuario();
+    }
 
 }

@@ -19,6 +19,10 @@ require_once './controllers/ProductoController.php';
 require_once './controllers/MesaController.php';
 require_once './controllers/PedidoController.php';
 
+require_once './middlewares/AuthMiddleware.php';
+require_once './middlewares/ValidarSectorMW.php';
+require_once './middlewares/ValidarPedidoMW.php';
+
 // Instantiate App
 $app = AppFactory::create();
 
@@ -32,20 +36,35 @@ $app->addErrorMiddleware(true, true, true);
 $app->addBodyParsingMiddleware();
 
 // Routes
-$app->post('[/]', \UsuarioController::class . ':CargarUno');
-$app->get('/usuarios', \UsuarioController::class . ':TraerTodos');
-$app->get('/usuarios/{nombre}', \UsuarioController::class . ':TraerUno');
+$app->group('/usuarios', function (RouteCollectorProxy $group) {
+    $group->get('[/]', \UsuarioController::class . ':TraerTodos');
+    $group->post('[/]', \UsuarioController::class . ':CargarUno')
+        ->add(new ValidarSectorMW());;
+    $group->get('/{nombre}', \UsuarioController::class . ':TraerUno');
+})->add(new AuthMiddleware('socio'));
 
-$app->get('/productos', \ProductoController::class . ':TraerTodos');
-$app->post('/productos/nuevo', \ProductoController::class . ':CargarUno');
-$app->get('/productos/{producto}', \ProductoController::class . ':TraerUno');
+$app->group('/productos', function (RouteCollectorProxy $group) {
+    $group->get("[/]", \ProductoController::class . ':TraerTodos');
+    $group->post('[/]', \ProductoController::class . ':CargarUno')
+        ->add(new AuthMiddleware('socio'))
+        ->add(new ValidarSectorMW());
+    $group->get('/{producto}', \ProductoController::class . ':TraerUno');
+});
 
-$app->get('/mesas', \MesaController::class . ':TraerMesas');
-$app->post('/mesas/nuevo', \MesaController::class . ':CargarMesa');
-$app->get('/mesas/{codigoMesa}', \MesaController::class . ':TraerUnaMesa');
+$app->group('/mesas', function (RouteCollectorProxy $group) {
+    $group->get('[/]', \MesaController::class . ':TraerMesas');
+    $group->post('[/]', \MesaController::class . ':CargarMesa')->add(new AuthMiddleware('socio'));
+    $group->get('/{idMesa}', \MesaController::class . ':TraerUnaMesa');
+});
 
+$app->group('/pedidos', function (RouteCollectorProxy $group) {
+    $group->get('[/]', \PedidoController::class . ':TraerTodos');
+    $group->get('/{codigoPedido}', \PedidoController::class . ':TraerUno');
+    $group->post('[/]', \PedidoController::class . ':CargarPedido')
+        ->add(new AuthMiddleware('mozo'))
+        ->add(new ValidarPedidoMW());
 
-$app->post('/pedidos/{id_mozo}', \PedidoController::class . ':CargarPedido');
-$app->get('/pedidos', \PedidoController::class . ':TraerTodos');
+    $group->post('/{id_mozo}/prepararPedido', \PedidoController::class . ':PrepararPedido');
+});
 
 $app->run();
