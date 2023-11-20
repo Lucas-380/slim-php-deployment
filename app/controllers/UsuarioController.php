@@ -11,16 +11,17 @@ class UsuarioController extends Usuario implements IApiUsable
 
         $nombre = $parametros['nombre'];
         $sector = $parametros['sector'];
+        $username = $parametros['username'];
+        $contrasenia = $parametros['contrasenia'];
 
         if($sector != null && $nombre != null)
         {
           $usr = new Usuario();
           $usr->nombre = $nombre;
           $usr->sector = $sector;
-          
+          $usr->usuario = $username;
+          $usr->contrasenia = $contrasenia;
           $usr->pedidos_pendiente = array();
-
-
           $usr->estado = 'disponible';
           $usr->crearUsuario();
           $payload = json_encode(array("mensaje" => "Usuario creado con exito"));
@@ -48,6 +49,51 @@ class UsuarioController extends Usuario implements IApiUsable
         return $response
           ->withHeader('Content-Type', 'application/json');
     }
+
+    public function Modificar($request, $response, $args)
+    {
+      $parametros = $request->getParsedBody();
+      $id = $parametros['id'];
+      $usuario = Usuario::obtenerUsuarioPorId($id);
+  
+      if($usuario && $usuario->pedidos_pendiente == []){
+        $atributosModificables = ['nombre', 'usuario', 'contrasenia', 'sector', 'fechaDeBaja'];
+
+        $usuario->pedidos_pendiente = json_decode($usuario->pedidos_pendiente);
+        $usuario->estado = $usuario->estado;
+
+        foreach ($atributosModificables as $atributoModificado) {
+            if(isset($parametros[$atributoModificado])){
+                $usuario->{$atributoModificado} = $parametros[$atributoModificado];
+            }
+        }
+
+        $usuario->modificarUsuario();
+        
+        $payload = json_encode(array("mensaje" => "Usuario modificado correctamente"));
+      } else {
+          $payload = json_encode(array("mensaje" => "Error al modificar usuario"));
+      }
+  
+      $response->getBody()->write($payload);
+      return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    public function Eliminar($request, $response, $args)
+    {
+      $parametros = $request->getParsedBody();
+      $id = $parametros['id'];
+      $usuario = Usuario::obtenerUsuarioPorId($id);
+
+      if($usuario && Usuario::borrarUsuario($usuario->id)){
+        $payload = json_encode(array("mensaje" => "Usuario eliminado con exito"));
+      }else{
+        $payload = json_encode(array("mensaje" => "Error en eliminar usuario"));
+      }
+
+      $response->getBody()->write($payload);
+      return $response->withHeader('Content-Type', 'application/json');
+    }
     
     public static function BuscarMozo($id_mozo) {
       $mozo = Usuario::obtenerUsuarioPorId($id_mozo);
@@ -59,28 +105,15 @@ class UsuarioController extends Usuario implements IApiUsable
       }
     }
 
-
     public static function actualizarMozo($mozo, $estado, $pedido) {
       array_push($mozo->pedidos_pendiente, $pedido->idPedido);
-      $mozo->estado = $estado;
+      //$mozo->estado = $estado;
       $mozo->modificarUsuario();
     }
 
     public static function asignarProductoAEmpleado($productoPedido) {
-      switch ($productoPedido->sector) {
-        case 'cocina':
-          $empleado = Usuario::BuscarEmpleadoDisponible('cocina');
-          break;
-        case 'choperas':
-          $empleado = Usuario::BuscarEmpleadoDisponible('choperas');
-          break;
-        case 'tragos':
-          $empleado = Usuario::BuscarEmpleadoDisponible('tragos');
-          break;
-        case 'candy bar':
-          $empleado = Usuario::BuscarEmpleadoDisponible('candy bar');
-          break;
-      }
+
+      $empleado = Usuario::BuscarEmpleadoDisponible($productoPedido->sector);
 
       $empleado->pedidos_pendiente = json_decode($empleado->pedidos_pendiente);
       array_push($empleado->pedidos_pendiente, $productoPedido->id);
@@ -100,22 +133,7 @@ class UsuarioController extends Usuario implements IApiUsable
     private static function terminarProducto($productoPedido) {
       $retorno = false;
 
-      //$empleados = Usuario::obtenerUsuariosPorSector($productoPedido->sector);
-
-      switch ($productoPedido->sector) {
-        case 'cocina':
-          $empleados = Usuario::obtenerUsuariosPorSector('cocina');
-          break;
-        case 'choperas':
-          $empleados = Usuario::obtenerUsuariosPorSector('choperas');
-          break;
-        case 'tragos':
-          $empleados = Usuario::obtenerUsuariosPorSector('tragos');
-          break;
-        case 'candy bar':
-          $empleados = Usuario::obtenerUsuariosPorSector('candy bar');
-          break;
-      }
+      $empleados = Usuario::obtenerUsuariosPorSector($productoPedido->sector);
 
       foreach ($empleados as $empleado) {
         $empleado->pedidos_pendiente = json_decode($empleado->pedidos_pendiente);
@@ -133,5 +151,30 @@ class UsuarioController extends Usuario implements IApiUsable
       return $retorno;
     }
 
+    public static function asignarSocio($pedido){
+      $socio = Usuario::BuscarEmpleadoDisponible('socio');
 
+      $socio->estado = 'ocupado';
+      $socio->pedidos_pendiente = json_decode($socio->pedidos_pendiente);
+      array_push($socio->pedidos_pendiente, $pedido->idPedido);
+
+      $socio->modificarUsuario();
+    }
+
+    public function listarPendientes($request, $response, $args){
+      $idUsuario = $request->getAttribute('idUsuario');
+      $empleado = Usuario::obtenerUsuarioPorId($idUsuario);
+      $arrayProductos = array();
+
+      $productosPendiente = json_decode($empleado->pedidos_pendiente);
+      foreach ($productosPendiente as $producto) {
+        array_push($arrayProductos, Producto::obtenerProductoPorId($producto));
+      }
+
+      $payload = json_encode($arrayProductos);
+      $response->getBody()->write($payload);
+      return $response
+        ->withHeader('Content-Type', 'application/json');
+
+    }
 }

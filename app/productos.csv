@@ -1,0 +1,9 @@
+id,nombre,sector,tiempoDePreparacion,precio,disponible
+6,"Milanesa a caballo",cocina,20,350.00,1
+7,"Cerveza negra",choperas,3,200.00,1
+8,"Ron con cola",tragos,3,650.00,1
+9,"Hot Cakes","candy bar",10,280.00,0
+11,Panqueques,"candy bar",10,150.00,1
+24,Fernet,tragos,5,500.00,1
+25,Empanadas,cocina,15,300.00,1
+28,Pizza,cocina,25,700.00,1
